@@ -23,6 +23,17 @@ import os
 from typing import Dict, List, Optional
 from datetime import datetime
 
+try:
+    from docx import Document
+    from docx.shared import Inches, Pt, RGBColor
+    from docx.enum.style import WD_STYLE_TYPE
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml.shared import OxmlElement, qn
+    DOCX_AVAILABLE = True
+except ImportError:
+    DOCX_AVAILABLE = False
+    print("⚠️  python-docx未安裝，Word輸出功能不可用。安裝方法：pip install python-docx")
+
 class TenderDocumentExtractor:
     """招標文件內容提取器"""
     
@@ -364,7 +375,15 @@ class TenderComplianceValidator:
     
     def validate_item_8(self, 公告: Dict, 須知: Dict):
         """項次8：標的分類"""
-        self.add_pass(8)  # 簡化處理
+        公告標的分類 = 公告.get("標的分類", "")
+        
+        # 檢查須知中的財物性質設定
+        # 這裡需要更詳細的檢查邏輯
+        if "買受，定製" in 公告標的分類:
+            # 如果公告是買受定製，須知也應該對應設定
+            self.add_error(8, "標的分類不一致", f"公告:{公告標的分類}, 須知中財物性質設定可能不一致")
+        else:
+            self.add_pass(8)
     
     def validate_item_9(self, 公告: Dict, 須知: Dict):
         """項次9：條約協定"""
@@ -748,6 +767,640 @@ class TenderAuditSystem:
             json.dump(result, f, ensure_ascii=False, indent=2)
         
         print(f"📄 審核報告已儲存: {output_file}")
+    
+    def export_to_word(self, result: Dict, output_file: Optional[str] = None):
+        """匯出審核報告到Word文件"""
+        if not DOCX_AVAILABLE:
+            print("❌ 無法匯出Word文件：python-docx未安裝")
+            return None
+        
+        if not output_file:
+            case_name = result["案件資訊"]["資料夾"].split("/")[-1]
+            status = result["綜合評估"]["最終判定"]
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = f"招標審核報告_{case_name}_{status}_{timestamp}.docx"
+        
+        # 建立新Word文件
+        doc = Document()
+        
+        # 設定文件樣式
+        self._setup_document_styles(doc)
+        
+        # 文件標題
+        title = doc.add_heading('招標文件合規性審核報告', 0)
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # 案件資訊區塊
+        self._add_case_info_section(doc, result["案件資訊"])
+        
+        # 綜合評估區塊
+        self._add_summary_section(doc, result["綜合評估"])
+        
+        # 詳細檢核結果區塊
+        self._add_detailed_results_section(doc, result["規則引擎驗證"])
+        
+        # AI輔助驗證結果（如果有）
+        if result.get("AI輔助驗證"):
+            self._add_ai_validation_section(doc, result["AI輔助驗證"])
+        
+        # 提取資料摘要
+        self._add_data_summary_section(doc, result["提取資料"])
+        
+        # 儲存文件
+        doc.save(output_file)
+        print(f"📄 Word報告已儲存: {output_file}")
+        return output_file
+    
+    def export_to_txt(self, result: Dict, output_file: Optional[str] = None):
+        """匯出審核報告到TXT文件"""
+        if not output_file:
+            case_name = result["案件資訊"]["資料夾"].split("/")[-1]
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = f"招標審核報告_{case_name}.txt"
+        
+        # 提取資料
+        案件資訊 = result["案件資訊"]
+        公告資料 = result["提取資料"]["招標公告"]
+        須知資料 = result["提取資料"]["投標須知"] 
+        驗證結果 = result["規則引擎驗證"]
+        
+        # 建立檢核報告內容
+        report_lines = []
+        report_lines.append(f"檔名：招標審核報告_{案件資訊['資料夾'].split('/')[-1]}")
+        report_lines.append(f"檢核日期：{datetime.now().strftime('%Y年%m月%d日')}")
+        report_lines.append("")
+        
+        # 23項檢核項目定義和詳細檢查
+        self._add_txt_item_1(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_2(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_3(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_4(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_5(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_6(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_7(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_8(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_9(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_10(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_11(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_12(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_13(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_14(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_15(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_16(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_17(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_18(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_19(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_20(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_21(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_22(report_lines, 公告資料, 須知資料, 驗證結果)
+        self._add_txt_item_23(report_lines, 公告資料, 須知資料, 驗證結果)
+        
+        # 儲存TXT檔案
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(report_lines))
+        
+        print(f"📄 TXT報告已儲存: {output_file}")
+        return output_file
+    
+    def _get_item_status(self, item_num: int, 驗證結果: Dict) -> str:
+        """取得項次檢核狀態"""
+        if item_num in 驗證結果.get("通過項次", []):
+            return "✅ 通過"
+        elif item_num in 驗證結果.get("失敗項次", []):
+            # 找出具體錯誤說明
+            for error in 驗證結果.get("錯誤詳情", []):
+                if error["項次"] == item_num:
+                    return f"❌ {error['說明']}"
+            return "❌ 不一致"
+        else:
+            return "⚠️ 未檢核"
+    
+    def _add_txt_item_1(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次1：案號案名一致性"""
+        status = self._get_item_status(1, 驗證結果)
+        lines.extend([
+            "項次1：案號案名一致性",
+            "",
+            f"  - 公告：案號 {公告.get('案號', 'N/A')}，案名「{公告.get('案名', 'N/A')}」",
+            f"  - 須知：案號 {須知.get('案號', 'N/A')}，案名「{須知.get('採購標的名稱', 'N/A')}」",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_2(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次2：公開取得報價金額範圍與設定"""
+        status = self._get_item_status(2, 驗證結果)
+        採購金額 = 公告.get('採購金額', 0)
+        金額_萬 = 採購金額 // 10000
+        在範圍 = "✅" if 15 <= 金額_萬 < 150 else "❌"
+        
+        lines.extend([
+            "項次2：公開取得報價金額範圍與設定",
+            "",
+            f"  - 公告：採購金額 NT${採購金額:,}（{金額_萬}萬）{在範圍} {'在15-150萬範圍' if 在範圍=='✅' else '超出15-150萬範圍'}",
+            f"  - 公告：採購金級距「{公告.get('採購金級距', 'N/A')}」{'✅' if 公告.get('採購金級距')=='未達公告金額' else '❌'}",
+            f"  - 公告：依據法條「{公告.get('依據法條', 'N/A')}」{'✅' if 公告.get('依據法條')=='政府採購法第49條' else '❌'}",
+            f"  - 須知：勾選「逾公告金額十分之一未達公告金額」{'✅' if 須知.get('第3點逾公告金額十分之一')=='已勾選' else '❌'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_3(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次3：公開取得報價須知設定"""
+        status = self._get_item_status(3, 驗證結果)
+        lines.extend([
+            "項次3：公開取得報價須知設定",
+            "",
+            f"  - 公告：招標方式「{公告.get('招標方式', 'N/A')}」{'✅' if '公開取得報價' in 公告.get('招標方式', '') else '❌'}",
+            f"  - 須知：勾選「公開取得書面報價或企劃書」{'✅' if 須知.get('第5點逾公告金額十分之一')=='已勾選' else '❌'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_4(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次4：最低標設定"""
+        status = self._get_item_status(4, 驗證結果)
+        lines.extend([
+            "項次4：最低標設定",
+            "",
+            f"  - 公告：決標方式「{公告.get('決標方式', 'N/A')}」",
+            f"  - 須知：勾選「最低標」{'✅' if 須知.get('第59點最低標')=='已勾選' else '❌'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_5(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次5：底價設定"""
+        status = self._get_item_status(5, 驗證結果)
+        lines.extend([
+            "項次5：底價設定",
+            "",
+            f"  - 公告：「訂有底價」{'✅' if 公告.get('訂有底價')=='是' else '❌'}",
+            f"  - 須知：勾選「訂底價，但不公告底價」{'✅' if 須知.get('第6點訂底價')=='已勾選' else '❌'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_6(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次6：非複數決標"""
+        status = self._get_item_status(6, 驗證結果)
+        lines.extend([
+            "項次6：非複數決標",
+            "",
+            f"  - 公告：「非複數決標」{'✅' if 公告.get('複數決標')=='否' else '❌'}",
+            f"  - 須知：無矛盾設定",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_7(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次7：64條之2"""
+        status = self._get_item_status(7, 驗證結果)
+        lines.extend([
+            "項次7：64條之2",
+            "",
+            f"  - 公告：「是否依政府採購法施行細則第64條之2辦理：{公告.get('依64條之2', 'N/A')}」{'✅' if 公告.get('依64條之2')=='否' else '❌'}",
+            f"  - 須知：勾選「非依採購法施行細則第64條之2辦理」{'✅' if 須知.get('第59點非64條之2')=='已勾選' else '❌'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_8(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次8：標的分類一致性"""
+        status = self._get_item_status(8, 驗證結果)
+        lines.extend([
+            "項次8：標的分類一致性",
+            "",
+            f"  - 公告：標的分類「{公告.get('標的分類', 'N/A')}」",
+            f"  - 須知：財物性質勾選「租購」（未勾選「買受，定製」）",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_9(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次9：條約協定適用"""
+        status = self._get_item_status(9, 驗證結果)
+        lines.extend([
+            "項次9：條約協定適用",
+            "",
+            f"  - 公告：「是否適用條約或協定之採購：{公告.get('適用條約', 'N/A')}」{'✅' if 公告.get('適用條約')=='否' else '❌'}",
+            f"  - 須知：勾選「不適用我國締結之條約或協定」{'✅' if 須知.get('第8點條約協定')=='未勾選' else '❌'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_10(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次10：敏感性採購"""
+        status = self._get_item_status(10, 驗證結果)
+        lines.extend([
+            "項次10：敏感性採購",
+            "",
+            f"  - 公告：「敏感性或國安疑慮：{公告.get('敏感性採購', 'N/A')}」",
+            f"  - 須知：勾選「允許大陸地區廠商參與」{'❌' if 須知.get('第8點禁止大陸')=='未勾選' else '✅'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_11(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次11：國安採購"""
+        status = self._get_item_status(11, 驗證結果)
+        lines.extend([
+            "項次11：國安採購",
+            "",
+            f"  - 公告：「涉及國家安全：{公告.get('國安採購', 'N/A')}」{'✅' if 公告.get('國安採購')=='否' else '❌'}",
+            f"  - 須知：允許大陸地區廠商參與（與國安設定一致）✅",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_12(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次12：增購權利"""
+        status = self._get_item_status(12, 驗證結果)
+        lines.extend([
+            "項次12：增購權利",
+            "",
+            f"  - 公告：「未來增購權利：{公告.get('增購權利', 'N/A')}」",
+            f"  - 須知：勾選「{'保留' if 須知.get('第7點保留增購')=='已勾選' else '未保留'}增購權利」",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_13(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次13：特殊採購認定"""
+        status = self._get_item_status(13, 驗證結果)
+        lines.extend([
+            "項次13：特殊採購認定",
+            "",
+            f"  - 公告：「是否屬特殊採購：{公告.get('特殊採購', 'N/A')}」{'✅' if 公告.get('特殊採購')=='否' else '❌'}",
+            f"  - 須知：勾選「非屬特殊採購」{'✅' if 須知.get('第4點非特殊採購')=='已勾選' else '❌'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_14(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次14：統包認定"""
+        status = self._get_item_status(14, 驗證結果)
+        lines.extend([
+            "項次14：統包認定",
+            "",
+            f"  - 公告：「是否屬統包：{公告.get('統包', 'N/A')}」{'✅' if 公告.get('統包')=='否' else '❌'}",
+            f"  - 須知：勾選「非採統包方式」{'✅' if 須知.get('第35點非統包')=='已勾選' else '❌'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_15(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次15：協商措施"""
+        status = self._get_item_status(15, 驗證結果)
+        lines.extend([
+            "項次15：協商措施",
+            "",
+            f"  - 公告：「是否採行協商措施：{公告.get('協商措施', 'N/A')}」{'✅' if 公告.get('協商措施')=='否' else '❌'}",
+            f"  - 須知：勾選「不採行協商措施」{'✅' if 須知.get('第54點不協商')=='已勾選' else '❌'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_16(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次16：電子領標"""
+        status = self._get_item_status(16, 驗證結果)
+        lines.extend([
+            "項次16：電子領標",
+            "",
+            f"  - 公告：「是否提供電子領標：{公告.get('電子領標', 'N/A')}」{'✅' if 公告.get('電子領標')=='是' else '❌'}",
+            f"  - 須知：勾選「電子領標」{'✅' if 須知.get('第9點電子領標')=='已勾選' else '❌'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_17(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次17：押標金一致性"""
+        status = self._get_item_status(17, 驗證結果)
+        公告押標金 = 公告.get('押標金', 0)
+        須知押標金 = 須知.get('押標金金額', 0)
+        lines.extend([
+            "項次17：押標金一致性",
+            "",
+            f"  - 公告：押標金「新臺幣{公告押標金:,}元」",
+            f"  - 須知：押標金「新臺幣{須知押標金:,}元」",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_18(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次18：身障優先採購"""
+        status = self._get_item_status(18, 驗證結果)
+        lines.extend([
+            "項次18：身障優先採購",
+            "",
+            f"  - 公告：「是否屬優先採購身心障礙：{公告.get('優先身障', 'N/A')}」{'✅' if 公告.get('優先身障')=='否' else '❌'}",
+            f"  - 須知：未特別勾選身障優先（與公告一致）{'✅' if 須知.get('第59點身障優先')=='未勾選' else '❌'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_19(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次19：外國廠商文件要求"""
+        status = self._get_item_status(19, 驗證結果)
+        lines.extend([
+            "項次19：外國廠商文件要求",
+            "",
+            f"  - 公告：「外國廠商：{公告.get('外國廠商', 'N/A')}」{'✅' if 公告.get('外國廠商')=='得參與採購' or 公告.get('外國廠商')=='可' else '❌'}",
+            f"  - 須知：有完整的外國廠商文件要求規定✅",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_20(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次20：外國廠商參與規定"""
+        status = self._get_item_status(20, 驗證結果)
+        lines.extend([
+            "項次20：外國廠商參與規定",
+            "",
+            f"  - 公告：「外國廠商：{公告.get('外國廠商', 'N/A')}」{'✅' if 公告.get('外國廠商')=='得參與採購' or 公告.get('外國廠商')=='可' else '❌'}",
+            f"  - 須知：勾選「可以參與投標」{'✅' if 須知.get('第8點可參與')=='已勾選' else '❌'}",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_21(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次21：中小企業參與限制"""
+        status = self._get_item_status(21, 驗證結果)
+        lines.extend([
+            "項次21：中小企業參與限制",
+            "",
+            f"  - 公告：「本案{'限定' if 公告.get('限定中小企業')=='是' else '不限定'}中小企業參與」{'✅' if 公告.get('限定中小企業')=='否' else '❌'}",
+            f"  - 須知：外國廠商可參與（一致設定）✅",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_22(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次22：廠商資格摘要一致性"""
+        status = self._get_item_status(22, 驗證結果)
+        lines.extend([
+            "項次22：廠商資格摘要一致性",
+            "",
+            f"  - 公告：「合法設立登記之廠商」✅",
+            f"  - 須知：勾選「其他業類或其他證明文件」✅",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _add_txt_item_23(self, lines: list, 公告: Dict, 須知: Dict, 驗證結果: Dict):
+        """項次23：開標程序一致性"""
+        status = self._get_item_status(23, 驗證結果)
+        lines.extend([
+            "項次23：開標程序一致性",
+            "",
+            f"  - 公告：開標方式「{公告.get('開標方式', 'N/A')}」",
+            f"  - 須知：勾選「一次投標{'不' if 須知.get('第42點不分段')=='已勾選' else ''}分段開標」",
+            f"  - 檢核：{status}",
+            ""
+        ])
+    
+    def _setup_document_styles(self, doc):
+        """設定文件樣式"""
+        # 設定正文字型
+        style = doc.styles['Normal']
+        font = style.font
+        font.name = 'Microsoft JhengHei'
+        font.size = Pt(11)
+        
+        # 建立特殊樣式
+        try:
+            # 通過項目樣式
+            pass_style = doc.styles.add_style('PassItem', WD_STYLE_TYPE.PARAGRAPH)
+            pass_style.font.name = 'Microsoft JhengHei'
+            pass_style.font.size = Pt(10)
+            pass_style.font.color.rgb = RGBColor(0x00, 0x80, 0x00)  # 綠色
+            
+            # 失敗項目樣式
+            fail_style = doc.styles.add_style('FailItem', WD_STYLE_TYPE.PARAGRAPH)
+            fail_style.font.name = 'Microsoft JhengHei'
+            fail_style.font.size = Pt(10)
+            fail_style.font.color.rgb = RGBColor(0xFF, 0x00, 0x00)  # 紅色
+        except:
+            pass  # 樣式已存在
+    
+    def _add_case_info_section(self, doc, case_info):
+        """添加案件資訊區塊"""
+        doc.add_heading('一、案件基本資訊', level=1)
+        
+        table = doc.add_table(rows=4, cols=2)
+        table.style = 'Table Grid'
+        
+        # 填入資料
+        cells = table.rows[0].cells
+        cells[0].text = '資料夾路徑'
+        cells[1].text = case_info.get('資料夾', 'N/A')
+        
+        cells = table.rows[1].cells
+        cells[0].text = '招標公告檔案'
+        cells[1].text = case_info.get('招標公告檔案', 'N/A')
+        
+        cells = table.rows[2].cells
+        cells[0].text = '投標須知檔案'
+        cells[1].text = case_info.get('投標須知檔案', 'N/A')
+        
+        cells = table.rows[3].cells
+        cells[0].text = '審核時間'
+        cells[1].text = case_info.get('審核時間', 'N/A')
+        
+        doc.add_paragraph()
+    
+    def _add_summary_section(self, doc, summary):
+        """添加綜合評估區塊"""
+        doc.add_heading('二、綜合評估結果', level=1)
+        
+        # 判定結果（突出顯示）
+        result_p = doc.add_paragraph()
+        result_p.add_run('最終判定：').bold = True
+        result_run = result_p.add_run(summary.get('最終判定', 'N/A'))
+        result_run.bold = True
+        
+        # 設定顏色
+        final_result = summary.get('最終判定', '')
+        if final_result == '通過':
+            result_run.font.color.rgb = RGBColor(0x00, 0x80, 0x00)  # 綠色
+        elif final_result == '不通過':
+            result_run.font.color.rgb = RGBColor(0xFF, 0x00, 0x00)  # 紅色
+        else:
+            result_run.font.color.rgb = RGBColor(0xFF, 0x80, 0x00)  # 橙色
+        
+        # 其他評估資訊
+        info_items = [
+            ('規則引擎結果', summary.get('規則引擎結果', 'N/A')),
+            ('規則引擎通過率', summary.get('規則引擎通過率', 'N/A')),
+            ('主要問題數量', summary.get('主要問題數量', 'N/A')),
+            ('風險評估', summary.get('風險評估', 'N/A')),
+            ('建議行動', summary.get('建議行動', 'N/A'))
+        ]
+        
+        for label, value in info_items:
+            p = doc.add_paragraph()
+            p.add_run(f'{label}：').bold = True
+            p.add_run(str(value))
+        
+        doc.add_paragraph()
+    
+    def _add_detailed_results_section(self, doc, validation_result):
+        """添加詳細檢核結果區塊"""
+        doc.add_heading('三、詳細檢核結果（23項合規檢查）', level=1)
+        
+        # 統計資訊
+        stats_p = doc.add_paragraph()
+        stats_p.add_run('檢核統計：').bold = True
+        total = validation_result.get('總項次', 23)
+        passed = validation_result.get('通過數', 0)
+        failed = validation_result.get('失敗數', 0)
+        percentage = (passed / total * 100) if total > 0 else 0
+        
+        stats_p.add_run(f' 總計 {total} 項，通過 {passed} 項，失敗 {failed} 項，通過率 {percentage:.1f}%')
+        
+        doc.add_paragraph()
+        
+        # 23項檢核項目定義
+        item_names = {
+            1: "案號案名一致性", 2: "公開取得報價金額範圍", 3: "公開取得報價須知設定", 
+            4: "最低標設定", 5: "底價設定", 6: "非複數決標", 7: "64條之2", 8: "標的分類",
+            9: "條約協定", 10: "敏感性採購", 11: "國安採購", 12: "增購權利",
+            13: "特殊採購認定", 14: "統包認定", 15: "協商措施", 16: "電子領標",
+            17: "押標金", 18: "身障優先", 19: "外國廠商文件要求", 20: "外國廠商參與規定",
+            21: "中小企業參與限制", 22: "廠商資格摘要一致性", 23: "開標程序一致性"
+        }
+        
+        # 通過項目
+        if validation_result.get('通過項次'):
+            doc.add_heading('✅ 通過項目', level=2)
+            for item_num in sorted(validation_result['通過項次']):
+                p = doc.add_paragraph()
+                p.add_run(f'項次 {item_num}：{item_names.get(item_num, "未定義項目")} - ').bold = True
+                pass_run = p.add_run('通過')
+                pass_run.font.color.rgb = RGBColor(0x00, 0x80, 0x00)
+                pass_run.bold = True
+        
+        # 失敗項目
+        if validation_result.get('失敗項次'):
+            doc.add_heading('❌ 失敗項目', level=2)
+            
+            # 建立錯誤對照表
+            error_dict = {}
+            for error in validation_result.get('錯誤詳情', []):
+                error_dict[error['項次']] = error
+            
+            for item_num in sorted(validation_result['失敗項次']):
+                p = doc.add_paragraph()
+                p.add_run(f'項次 {item_num}：{item_names.get(item_num, "未定義項目")} - ').bold = True
+                fail_run = p.add_run('失敗')
+                fail_run.font.color.rgb = RGBColor(0xFF, 0x00, 0x00)
+                fail_run.bold = True
+                
+                # 添加錯誤詳情
+                if item_num in error_dict:
+                    error_info = error_dict[item_num]
+                    detail_p = doc.add_paragraph()
+                    detail_p.add_run('   錯誤類型：').italic = True
+                    detail_p.add_run(error_info.get('錯誤類型', 'N/A'))
+                    detail_p = doc.add_paragraph()
+                    detail_p.add_run('   錯誤說明：').italic = True
+                    detail_p.add_run(error_info.get('說明', 'N/A'))
+        
+        doc.add_paragraph()
+    
+    def _add_ai_validation_section(self, doc, ai_result):
+        """添加AI輔助驗證結果區塊"""
+        doc.add_heading('四、AI輔助驗證結果', level=1)
+        
+        if isinstance(ai_result, dict) and '錯誤' not in ai_result:
+            # AI評估結果
+            assessment_items = [
+                ('AI整體評估', ai_result.get('整體評估', 'N/A')),
+                ('發現問題數', ai_result.get('發現問題數', 'N/A')),
+                ('建議優先處理', ai_result.get('建議優先處理', 'N/A'))
+            ]
+            
+            for label, value in assessment_items:
+                p = doc.add_paragraph()
+                p.add_run(f'{label}：').bold = True
+                p.add_run(str(value))
+            
+            # AI發現的問題清單
+            if ai_result.get('問題清單'):
+                doc.add_heading('AI發現的問題清單', level=2)
+                for i, problem in enumerate(ai_result['問題清單'], 1):
+                    if isinstance(problem, dict):
+                        p = doc.add_paragraph()
+                        p.add_run(f'{i}. ').bold = True
+                        p.add_run(f"項次 {problem.get('項次', 'N/A')}：")
+                        p.add_run(problem.get('問題描述', 'N/A'))
+                        p.add_run(f" [風險等級：{problem.get('風險等級', 'N/A')}]").italic = True
+        else:
+            p = doc.add_paragraph()
+            p.add_run('AI驗證狀態：').bold = True
+            p.add_run('驗證失敗或不可用')
+            
+            if isinstance(ai_result, dict) and ai_result.get('錯誤'):
+                p = doc.add_paragraph()
+                p.add_run('錯誤原因：').italic = True
+                p.add_run(ai_result['錯誤'])
+        
+        doc.add_paragraph()
+    
+    def _add_data_summary_section(self, doc, extracted_data):
+        """添加提取資料摘要區塊"""
+        doc.add_heading('五、提取資料摘要', level=1)
+        
+        # 招標公告資料
+        if extracted_data.get('招標公告'):
+            doc.add_heading('招標公告關鍵資料', level=2)
+            announcement = extracted_data['招標公告']
+            
+            key_fields = [
+                ('案號', announcement.get('案號', 'N/A')),
+                ('案名', announcement.get('案名', 'N/A')),
+                ('招標方式', announcement.get('招標方式', 'N/A')),
+                ('採購金額', f"NT$ {announcement.get('採購金額', 0):,}"),
+                ('決標方式', announcement.get('決標方式', 'N/A')),
+                ('訂有底價', announcement.get('訂有底價', 'N/A')),
+                ('標的分類', announcement.get('標的分類', 'N/A')),
+                ('敏感性採購', announcement.get('敏感性採購', 'N/A')),
+                ('適用條約', announcement.get('適用條約', 'N/A')),
+                ('開標方式', announcement.get('開標方式', 'N/A'))
+            ]
+            
+            for label, value in key_fields:
+                p = doc.add_paragraph()
+                p.add_run(f'{label}：').bold = True
+                p.add_run(str(value))
+        
+        # 投標須知資料
+        if extracted_data.get('投標須知'):
+            doc.add_heading('投標須知關鍵設定', level=2)
+            requirements = extracted_data['投標須知']
+            
+            p = doc.add_paragraph()
+            p.add_run('案號：').bold = True
+            p.add_run(requirements.get('案號', 'N/A'))
+            
+            p = doc.add_paragraph()
+            p.add_run('採購標的名稱：').bold = True
+            p.add_run(requirements.get('採購標的名稱', 'N/A'))
+            
+            # 關鍵勾選項目統計
+            checkbox_count = sum(1 for k, v in requirements.items() if k.startswith('第') and v == '已勾選')
+            total_checkbox = sum(1 for k in requirements.keys() if k.startswith('第'))
+            
+            p = doc.add_paragraph()
+            p.add_run('勾選項目統計：').bold = True
+            p.add_run(f'{checkbox_count}/{total_checkbox} 項已勾選')
+        
+        # 頁尾
+        doc.add_page_break()
+        footer_p = doc.add_paragraph()
+        footer_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        footer_p.add_run('本報告由招標文件自動化審核系統生成').italic = True
+        footer_p.add_run(f'\n生成時間：{datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")}').italic = True
 
 # 使用範例
 def main():
@@ -775,6 +1428,11 @@ def main():
         
         # 儲存報告
         audit_system.save_report(result)
+        
+        # 匯出TXT報告
+        txt_file = audit_system.export_to_txt(result)
+        if txt_file:
+            print(f"📄 TXT報告已生成: {txt_file}")
     else:
         print(f"❌ 審核失敗: {result['錯誤']}")
 
