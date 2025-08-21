@@ -1,2 +1,27 @@
-C13A05954/.DS_Store
+# 排除文檔和報告檔案
+*.doc
+*.docx
+*.txt
+*.md
+
+# 排除暫存檔案
+~$*
+*.tmp
 .DS_Store
+
+# 排除測試資料夾
+C13A07469/
+C14A00139/
+C13A05954/
+
+# 排除審核報告
+audit_report_*.json
+AI檢核報告_*.txt
+AI完整檢核報告_*.txt
+AI檢核結果_*.json
+
+# Python相關
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
