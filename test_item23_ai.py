@@ -43,7 +43,7 @@ def call_ai_model(prompt):
     """呼叫AI模型"""
     try:
         response = requests.post(
-            "http://192.168.53.14:11434/api/generate",
+            "http://192.168.53.254:11434/api/generate",
             json={
                 "model": "gemma3:27b",
                 "prompt": prompt,

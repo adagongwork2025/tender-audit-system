@@ -7,7 +7,7 @@ from typing import Dict, List
 class C14A00139Processor:
     def __init__(self):
         self.model_name = "gemma2:7b"  # 可改為 "gpt-oss:latest" 或其他模型
-        self.ollama_url = "http://192.168.53.14:11434/api/generate"
+        self.ollama_url = "http://192.168.53.254:11434/api/generate"
         
     def extract_odt_content(self, file_path: str) -> str:
         """提取ODT內容"""

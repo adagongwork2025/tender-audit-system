@@ -16,7 +16,7 @@ class Complete23ItemChecker:
     """完整23項標準檢核系統"""
     
     def __init__(self, case_id: Optional[str] = None):
-        self.ollama_url = "http://192.168.53.14:11434"
+        self.ollama_url = "http://192.168.53.254:11434"
         self.model = "gpt-oss:latest"
         self.case_id = case_id
         self.audit_rules = {}

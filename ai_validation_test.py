@@ -5,7 +5,7 @@ def call_gemma(prompt):
     """呼叫Gemma 2 7B模型"""
     try:
         response = requests.post(
-            "http://192.168.53.14:11434/api/generate",
+            "http://192.168.53.254:11434/api/generate",
             json={
                 "model": "gemma3:27b",
                 "prompt": prompt,

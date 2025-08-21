@@ -8,7 +8,7 @@ from datetime import datetime
 
 class OllamaChat:
     def __init__(self, model="gpt-oss:latest"):
-        self.ollama_url = "http://192.168.53.14:11434"
+        self.ollama_url = "http://192.168.53.254:11434"
         self.model = model
         self.conversation_history = []
         

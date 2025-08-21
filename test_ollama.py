@@ -6,7 +6,7 @@ import json
 
 def test_ollama_connection():
     """測試 Ollama API 是否正常運作"""
-    ollama_url = "http://192.168.53.14:11434"
+    ollama_url = "http://192.168.53.254:11434"
     
     print(f"🔍 測試 Ollama API: {ollama_url}")
     print("="*50)

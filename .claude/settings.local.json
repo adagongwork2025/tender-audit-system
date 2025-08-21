@@ -2,8 +2,18 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "WebFetch(domain:192.168.53.14)",
-      "Bash(python3:*)"
+      "WebFetch(domain:192.168.53.254)",
+      "Bash(python3:*)",
+      "Bash(git config:*)",
+      "Bash(cat:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(git remote remove:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(ssh:*)",
+      "Bash(ping:*)"
     ],
     "deny": []
   }

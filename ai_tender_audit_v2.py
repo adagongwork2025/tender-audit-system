@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
-招標文件AI智能審核系統 V2.0 - 以Gemma AI為核心的檢核引擎
-========================================================
+北捷V1 - 招標文件AI智能審核系統 V2.0
+=============================================
+
+【系統簡介】
+北捷V1是專為政府採購招標文件設計的AI智能審核系統，以Gemma AI為核心引擎，
+提供完整的23項政府採購法合規檢核，確保招標文件的一致性和合規性。
 
 【系統特色】
 • 🤖 以Gemma 3 27B大語言模型為主要檢核引擎，告別死板的規則引擎
@@ -10,14 +14,32 @@
 • 🎯 語義理解：真正理解文件內容，而非僅靠關鍵字匹配
 • ⚡ 彈性適應：支援ODT/DOCX多種格式，智能識別各種勾選符號
 
-【核心優勢】
-V1.0 規則引擎的問題：多一個空格就失敗，格式稍有變化就無法識別
-V2.0 AI引擎的優勢：智能理解內容本意，自動容錯格式差異
+【技術優勢】
+傳統規則引擎的問題：多一個空格就失敗，格式稍有變化就無法識別
+北捷V1 AI引擎的優勢：智能理解內容本意，自動容錯格式差異
+
+【檢核項目】
+涵蓋政府採購法規定的23項合規檢核：
+1. 案號案名一致性          2. 公開取得報價金額範圍
+3. 公開取得報價須知設定    4. 最低標設定
+5. 底價設定              6. 非複數決標
+7. 64條之2              8. 標的分類一致性
+9. 條約協定適用          10. 敏感性採購
+11. 國安採購            12. 增購權利
+13. 特殊採購            14. 統包
+15. 協商措施            16. 電子領標
+17. 押標金              18. 身障優先
+19. 外國廠商文件        20. 外國廠商參與
+21. 中小企業            22. 廠商資格
+23. 開標程序
+
+【使用方式】
+輸入「北捷V1」即可啟動系統進行文件檢核
 
 【技術架構】
 1. 智能文件提取 - 保留原始格式特徵，避免過度清理
 2. AI資料提取 - 使用Gemma模型理解文件語義，提取結構化資料
-3. AI智能檢核 - 對比分析25個欄位，執行23項合規驗證
+3. AI智能檢核 - 對比分析各欄位，執行23項合規驗證
 4. 彈性報告輸出 - 生成標準格式檢核報告
 
 【適用場景】
@@ -27,7 +49,7 @@ V2.0 AI引擎的優勢：智能理解內容本意，自動容錯格式差異
 ✅ 格式多樣化的舊文件檢核
 
 作者：Claude AI Assistant
-版本：v2.0 (AI智能版)
+版本：v2.0 (北捷V1 AI智能版)
 日期：2025-08-21
 授權：MIT License
 """
@@ -43,7 +65,7 @@ from datetime import datetime
 class AITenderAuditSystemV2:
     """以AI為主的招標審核系統"""
     
-    def __init__(self, model_name="gemma3:27b", api_url="http://192.168.53.14:11434"):
+    def __init__(self, model_name="gemma3:27b", api_url="http://192.168.53.254:11434"):
         self.model_name = model_name
         self.api_url = f"{api_url}/api/generate"
         
@@ -639,12 +661,24 @@ def main():
     ai_system = AITenderAuditSystemV2()
     
     # 審核案件
-    case_folder = "/Users/ada/Desktop/ollama/C13A07469"
+    case_folder = "/Users/ada/Desktop/ollama/C14A01070"
     result = ai_system.audit_tender_case(case_folder)
     
     # 輸出報告
     if "錯誤" not in result:
-        ai_system.export_ai_report(result)
+        # 存回原資料夾
+        import os
+        report_filename = 'AI檢核報告_C14A01070.txt'
+        report_path = os.path.join(case_folder, report_filename)
+        ai_system.export_ai_report(result, report_path)
+        
+        # 同時儲存JSON
+        json_filename = 'AI檢核結果_C14A01070.json'
+        json_path = os.path.join(case_folder, json_filename)
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+        
+        print(f"\n✅ 報告已存回資料夾：{case_folder}")
     else:
         print(f"❌ 審核失敗: {result['錯誤']}")
 

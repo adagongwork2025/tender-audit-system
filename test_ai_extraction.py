@@ -10,7 +10,7 @@ import os
 
 class AIDocumentExtractor:
     def __init__(self):
-        self.ollama_url = "http://192.168.53.14:11434"
+        self.ollama_url = "http://192.168.53.254:11434"
         self.model = "gpt-oss:latest"
     
     def extract_odt_content(self, file_path: str) -> str:
