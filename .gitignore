@@ -1,13 +1,24 @@
-# 排除文檔和報告檔案
-*.doc
-*.docx
+# 排除文件和報告檔案
 *.txt
+*.json
+*.docx
+*.doc
 *.md
+!README.md
+!README_zh.md
+
+# 排除ODT檔案（招標文件）
+*.odt
+
+# DOT files (Graphviz)
+*.dot
 
 # 排除暫存檔案
 ~$*
 *.tmp
+*.temp
 .DS_Store
+Thumbs.db
 
 # 排除測試資料夾
 C13A07469/
@@ -20,9 +31,37 @@ audit_report_*.json
 AI檢核報告_*.txt
 AI完整檢核報告_*.txt
 AI檢核結果_*.json
+招標檢核報告_*.txt
+gemma_audit_*.json
 
 # Python相關
 __pycache__/
 *.py[cod]
 *$py.class
 *.pyc
+*.so
+.Python
+env/
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 日誌檔案
+*.log
+
+# 測試資料
+test_data/
+測試案例/
+
+# 報告輸出資料夾
+reports/
+輸出報告/
+
+# 備份檔案
+*.bak
+*.backup
