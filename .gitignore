@@ -6,6 +6,7 @@
 *.md
 !README.md
 !README_zh.md
+!README_CN.md
 
 # 排除ODT檔案（招標文件）
 *.odt
